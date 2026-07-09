@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Arbeitszeit">
+<title>Arbeitszeit-Tracker</title>
+<!-- Version 4: Online-Version für GitHub Pages (PC + iPhone) -->
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --text: #1a2233;
+    --muted: #6b7688;
+    --accent: #2563eb;
+    --accent-dark: #1d4ed8;
+    --green: #16a34a;
+    --red: #dc2626;
+    --border: #e2e8f0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1420;
+      --card: #1a2233;
+      --text: #eef2f8;
+      --muted: #94a0b4;
+      --border: #2c3850;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+  #banner {
+    display: none;
+    background: var(--red);
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size: 1.05rem; margin-bottom: 12px; }
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+  label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+  input, select {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--text);
+  }
+  button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+  }
+  button:hover { background: var(--accent-dark); }
+  button.secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  button.danger-link {
+    background: none;
+    color: var(--red);
+    padding: 4px 8px;
+    font-size: 0.85rem;
+  }
+  button.edit-link {
+    background: none;
+    color: var(--accent);
+    padding: 4px 8px;
+    font-size: 0.85rem;
+  }
+  .preview {
+    margin-top: 12px;
+    font-size: 0.9rem;
+    color: var(--muted);
+    min-height: 1.2em;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .stat {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat .value { font-size: 1.3rem; font-weight: 700; }
+  .stat .label { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .table-wrap { overflow-x: auto; }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .toolbar select { width: auto; }
+  .empty { color: var(--muted); text-align: center; padding: 24px 0; font-size: 0.9rem; }
+  .settings-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+  .settings-row > div { min-width: 130px; }
+  .hint { font-size: 0.75rem; color: var(--muted); margin-top: 8px; }
+  .status-ok { color: var(--green); }
+  .status-warn { color: var(--red); }
+</style>
+</head>
+<body>
+
+<h1>Arbeitszeit-Tracker</h1>
+<div class="subtitle">Sollzeit 9:18 netto · Pause zählt nicht zur Arbeitszeit · Überstunden werden automatisch berechnet</div>
+<div id="banner"></div>
+
+<div class="card">
+  <h2 id="formTitle">Neuer Eintrag</h2>
+  <div class="form-grid">
+    <div>
+      <label for="date">Datum</label>
+      <input type="date" id="date">
+    </div>
+    <div>
+      <label for="start">Beginn</label>
+      <input type="time" id="start">
+    </div>
+    <div>
+      <label for="end">Ende</label>
+      <input type="time" id="end">
+    </div>
+    <div>
+      <label for="pause">Pause (Min.)</label>
+      <input type="number" id="pause" min="0" step="5" value="30">
+    </div>
+    <div>
+      <button id="saveBtn" onclick="saveEntry()">Speichern</button>
+    </div>
+  </div>
+  <div class="preview" id="preview"></div>
+</div>
+
+<div class="card">
+  <h2>Übersicht</h2>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="card">
+  <div class="toolbar">
+    <h2 style="margin:0; flex:1;">Einträge</h2>
+    <select id="monthFilter" onchange="render()"></select>
+    <button class="secondary" onclick="exportCsv()">CSV exportieren</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Datum</th><th>Beginn</th><th>Ende</th><th>Pause</th>
+          <th>Netto-Arbeitszeit</th><th>Überstunden</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="emptyMsg" style="display:none;">Noch keine Einträge. Trag oben deinen ersten Arbeitstag ein.</div>
+</div>
+
+<div class="card">
+  <h2>Backup &amp; Sync (OneDrive)</h2>
+  <div class="toolbar" style="margin-bottom:8px;">
+    <button class="secondary" id="pickFolderBtn" onclick="pickBackupFolder()">Backup-Ordner wählen</button>
+    <button class="secondary" id="reconnectBtn" onclick="reconnectFolder()" style="display:none;">Backup wieder verbinden</button>
+    <button class="secondary" onclick="document.getElementById('importFile').click()">Backup importieren</button>
+    <button class="secondary" onclick="exportJson()">Backup-Datei exportieren</button>
+    <input type="file" id="importFile" accept=".json,application/json" style="display:none;" onchange="importBackup(this)">
+  </div>
+  <div class="hint" id="backupStatus"></div>
+  <div class="hint">Am PC (Chrome/Edge): einmal deinen OneDrive-Ordner wählen — danach werden bei jedem Eintrag automatisch <strong>arbeitszeit-backup.json</strong> (Datensicherung) und <strong>arbeitszeiten-uebersicht.html</strong> (lesbare Übersicht) dort gespeichert. Am iPhone: „Backup importieren" lädt den PC-Stand, „Backup-Datei exportieren" sichert deine iPhone-Einträge nach OneDrive.</div>
+</div>
+
+<div class="card">
+  <h2>Einstellungen</h2>
+  <div class="settings-row">
+    <div>
+      <label for="targetH">Sollzeit Std.</label>
+      <input type="number" id="targetH" min="0" max="24" value="9">
+    </div>
+    <div>
+      <label for="targetM">Sollzeit Min.</label>
+      <input type="number" id="targetM" min="0" max="59" value="18">
+    </div>
+    <div>
+      <label for="defaultPause">Standard-Pause (Min.)</label>
+      <input type="number" id="defaultPause" min="0" step="5" value="30">
+    </div>
+    <div>
+      <button class="secondary" onclick="saveSettings()">Übernehmen</button>
+    </div>
+  </div>
+  <div class="hint">Überstunden = (Ende − Beginn) − Pause − Sollzeit. Endet die Schicht nach Mitternacht, wird das automatisch erkannt. Alle Daten bleiben lokal auf deinem Gerät gespeichert — nichts wird ins Internet übertragen.</div>
+</div>
+
+<script>
+const KEY = 'arbeitszeit_entries_v1';
+const SETTINGS_KEY = 'arbeitszeit_settings_v1';
+let entries = [];
+let settings = { targetMin: 9 * 60 + 18, defaultPause: 30 };
+let editId = null;
+let dirHandle = null;
+let storageOk = true;
+
+function showBanner(msg) {
+  const b = document.getElementById('banner');
+  b.textContent = msg;
+  b.style.display = 'block';
+}
+window.addEventListener('error', ev => showBanner('Fehler in der App: ' + ev.message));
+try {
+  localStorage.setItem('__test', '1');
+  localStorage.removeItem('__test');
+} catch (e) {
+  storageOk = false;
+  showBanner('⚠️ Auf diesem Gerät kann nicht gespeichert werden — der Browser blockiert den lokalen Speicher. Einträge gehen beim Schließen verloren.');
+}
+
+function load() {
+  try { entries = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { entries = []; }
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    if (s && typeof s.targetMin === 'number') settings = s;
+  } catch (e) {}
+}
+function persist() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(entries));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch (e) {
+    showBanner('⚠️ Speichern fehlgeschlagen: Dieses Gerät blockiert den lokalen Speicher. Der Eintrag geht beim Schließen verloren.');
+  }
+  writeBackup(false);
+}
+
+function toMin(t) {
+  if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+function fmtHM(min, signed = false) {
+  const sign = min < 0 ? '−' : (signed ? '+' : '');
+  const a = Math.abs(Math.round(min));
+  return sign + Math.floor(a / 60) + ':' + String(a % 60).padStart(2, '0');
+}
+function fmtDate(iso) {
+  const [y, m, d] = iso.split('-');
+  return d + '.' + m + '.' + y;
+}
+function calc(e) {
+  let dur = toMin(e.end) - toMin(e.start);
+  if (dur <= 0) dur += 24 * 60; // Nachtschicht über Mitternacht
+  const net = dur - e.pause;
+  return { net, ot: net - settings.targetMin };
+}
+
+function saveEntry() {
+  const date = document.getElementById('date').value;
+  const start = document.getElementById('start').value;
+  const end = document.getElementById('end').value;
+  const pause = parseInt(document.getElementById('pause').value, 10);
+  if (!date || !start || !end || isNaN(pause) || pause < 0) {
+    alert('Bitte Datum, Beginn, Ende und Pause vollständig ausfüllen.');
+    return;
+  }
+  if (editId !== null) {
+    const e = entries.find(x => x.id === editId);
+    Object.assign(e, { date, start, end, pause });
+    editId = null;
+  } else {
+    entries.push({ id: Date.now(), date, start, end, pause });
+  }
+  entries.sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
+  persist();
+  resetForm();
+  render();
+}
+
+function resetForm() {
+  document.getElementById('date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('start').value = '';
+  document.getElementById('end').value = '';
+  document.getElementById('pause').value = settings.defaultPause;
+  document.getElementById('formTitle').textContent = 'Neuer Eintrag';
+  document.getElementById('saveBtn').textContent = 'Speichern';
+  editId = null;
+  updatePreview();
+}
+
+function editEntry(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  editId = id;
+  document.getElementById('date').value = e.date;
+  document.getElementById('start').value = e.start;
+  document.getElementById('end').value = e.end;
+  document.getElementById('pause').value = e.pause;
+  document.getElementById('formTitle').textContent = 'Eintrag bearbeiten (' + fmtDate(e.date) + ')';
+  document.getElementById('saveBtn').textContent = 'Aktualisieren';
+  updatePreview();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deleteEntry(id) {
+  const e = entries.find(x => x.id === id);
+  if (!confirm('Eintrag vom ' + fmtDate(e.date) + ' löschen?')) return;
+  entries = entries.filter(x => x.id !== id);
+  persist();
+  render();
+}
+
+function updatePreview() {
+  const start = document.getElementById('start').value;
+  const end = document.getElementById('end').value;
+  const pause = parseInt(document.getElementById('pause').value, 10) || 0;
+  const el = document.getElementById('preview');
+  if (!start || !end) { el.textContent = ''; return; }
+  const r = calc({ start, end, pause });
+  el.innerHTML = 'Netto-Arbeitszeit: <strong>' + fmtHM(r.net) + ' h</strong> · Überstunden: <strong class="' +
+    (r.ot >= 0 ? 'pos' : 'neg') + '">' + fmtHM(r.ot, true) + ' h</strong>';
+}
+
+function monthOptions() {
+  const sel = document.getElementById('monthFilter');
+  const current = sel.value;
+  const months = [...new Set(entries.map(e => e.date.slice(0, 7)))].sort().reverse();
+  const names = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+  sel.innerHTML = '<option value="all">Alle Monate</option>' + months.map(m => {
+    const [y, mo] = m.split('-');
+    return '<option value="' + m + '">' + names[parseInt(mo, 10) - 1] + ' ' + y + '</option>';
+  }).join('');
+  sel.value = months.includes(current) || current === 'all' ? current : (months[0] ? months[0] : 'all');
+}
+
+function render() {
+  monthOptions();
+  const filter = document.getElementById('monthFilter').value;
+  const visible = filter === 'all' ? entries : entries.filter(e => e.date.slice(0, 7) === filter);
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = visible.map(e => {
+    const r = calc(e);
+    return '<tr>' +
+      '<td>' + fmtDate(e.date) + '</td>' +
+      '<td>' + e.start + '</td>' +
+      '<td>' + e.end + '</td>' +
+      '<td>' + e.pause + ' Min</td>' +
+      '<td>' + fmtHM(r.net) + ' h</td>' +
+      '<td class="' + (r.ot >= 0 ? 'pos' : 'neg') + '"><strong>' + fmtHM(r.ot, true) + ' h</strong></td>' +
+      '<td><button class="edit-link" onclick="editEntry(' + e.id + ')">Bearbeiten</button>' +
+      '<button class="danger-link" onclick="deleteEntry(' + e.id + ')">Löschen</button></td>' +
+      '</tr>';
+  }).join('');
+  document.getElementById('emptyMsg').style.display = visible.length ? 'none' : 'block';
+
+  // Statistiken
+  const totalOt = entries.reduce((s, e) => s + calc(e).ot, 0);
+  const visOt = visible.reduce((s, e) => s + calc(e).ot, 0);
+  const visNet = visible.reduce((s, e) => s + calc(e).net, 0);
+  document.getElementById('stats').innerHTML =
+    stat(fmtHM(totalOt, true) + ' h', 'Überstunden gesamt', totalOt) +
+    stat(fmtHM(visOt, true) + ' h', filter === 'all' ? 'Überstunden (Auswahl)' : 'Überstunden im Monat', visOt) +
+    stat(fmtHM(visNet) + ' h', 'Netto-Arbeitszeit (Auswahl)', null) +
+    stat(visible.length, 'Arbeitstage (Auswahl)', null);
+}
+function stat(value, label, colorVal) {
+  const cls = colorVal === null ? '' : (colorVal >= 0 ? 'pos' : 'neg');
+  return '<div class="stat"><div class="value ' + cls + '">' + value + '</div><div class="label">' + label + '</div></div>';
+}
+
+function saveSettings() {
+  const h = parseInt(document.getElementById('targetH').value, 10) || 0;
+  const m = parseInt(document.getElementById('targetM').value, 10) || 0;
+  const p = parseInt(document.getElementById('defaultPause').value, 10);
+  settings.targetMin = h * 60 + m;
+  if (!isNaN(p) && p >= 0) settings.defaultPause = p;
+  persist();
+  document.getElementById('pause').value = settings.defaultPause;
+  updatePreview();
+  render();
+}
+
+function exportCsv() {
+  const filter = document.getElementById('monthFilter').value;
+  const visible = filter === 'all' ? entries : entries.filter(e => e.date.slice(0, 7) === filter);
+  let csv = 'Datum;Beginn;Ende;Pause (Min);Netto-Arbeitszeit;Ueberstunden\n';
+  visible.forEach(e => {
+    const r = calc(e);
+    csv += [fmtDate(e.date), e.start, e.end, e.pause, fmtHM(r.net), fmtHM(r.ot, true)].join(';') + '\n';
+  });
+  const totalOt = visible.reduce((s, e) => s + calc(e).ot, 0);
+  csv += ';;;;Summe Ueberstunden;' + fmtHM(totalOt, true) + '\n';
+  downloadBlob(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }),
+    'arbeitszeiten' + (filter === 'all' ? '' : '_' + filter) + '.csv');
+}
+
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------- Lesbare Übersicht (für iPhone / OneDrive-Vorschau, ohne JavaScript) ---------- */
+function reportHtml() {
+  const totalOt = entries.reduce((s, e) => s + calc(e).ot, 0);
+  const byMonth = {};
+  entries.forEach(e => { const m = e.date.slice(0, 7); byMonth[m] = (byMonth[m] || 0) + calc(e).ot; });
+  const names = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const col = v => v >= 0 ? '#16a34a' : '#dc2626';
+  const th = 'style="text-align:left;padding:8px;border-bottom:2px solid #cbd5e1;font-size:13px;color:#64748b;"';
+  const td = 'style="padding:8px;border-bottom:1px solid #e2e8f0;"';
+
+  const monthRows = Object.keys(byMonth).sort().reverse().map(m => {
+    const [y, mo] = m.split('-');
+    return '<tr><td ' + td + '>' + names[parseInt(mo, 10) - 1] + ' ' + y + '</td>' +
+      '<td ' + td + '><strong style="color:' + col(byMonth[m]) + '">' + fmtHM(byMonth[m], true) + ' h</strong></td></tr>';
+  }).join('');
+
+  const rows = [...entries].sort((a, b) => b.date.localeCompare(a.date)).map(e => {
+    const r = calc(e);
+    return '<tr><td ' + td + '>' + fmtDate(e.date) + '</td><td ' + td + '>' + e.start + '</td>' +
+      '<td ' + td + '>' + e.end + '</td><td ' + td + '>' + e.pause + ' Min</td>' +
+      '<td ' + td + '>' + fmtHM(r.net) + ' h</td>' +
+      '<td ' + td + '><strong style="color:' + col(r.ot) + '">' + fmtHM(r.ot, true) + ' h</strong></td></tr>';
+  }).join('');
+
+  return '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+    '<title>Arbeitszeiten – Übersicht</title></head>' +
+    '<body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;padding:16px;color:#1a2233;max-width:700px;margin:0 auto;">' +
+    '<h1 style="font-size:22px;">Arbeitszeiten – Übersicht</h1>' +
+    '<p style="color:#64748b;font-size:13px;">Stand: ' + new Date().toLocaleString('de-DE') + ' · Sollzeit ' + fmtHM(settings.targetMin) + ' h netto</p>' +
+    '<p style="font-size:18px;background:#f1f5f9;padding:12px;border-radius:10px;">Überstunden gesamt: <strong style="color:' + col(totalOt) + '">' + fmtHM(totalOt, true) + ' h</strong> (' + entries.length + ' Arbeitstage)</p>' +
+    '<h2 style="font-size:16px;margin-top:20px;">Überstunden pro Monat</h2>' +
+    '<table style="border-collapse:collapse;width:100%;"><tr><th ' + th + '>Monat</th><th ' + th + '>Überstunden</th></tr>' + monthRows + '</table>' +
+    '<h2 style="font-size:16px;margin-top:20px;">Alle Einträge</h2>' +
+    '<table style="border-collapse:collapse;width:100%;font-size:14px;"><tr><th ' + th + '>Datum</th><th ' + th + '>Beginn</th><th ' + th + '>Ende</th><th ' + th + '>Pause</th><th ' + th + '>Netto</th><th ' + th + '>Überstd.</th></tr>' + rows + '</table>' +
+    '</body></html>';
+}
+
+/* ---------- Backup & Sync ---------- */
+const supportsFS = 'showDirectoryPicker' in window;
+
+function backupData() {
+  return JSON.stringify({ app: 'arbeitszeit-tracker', exportiert: new Date().toISOString(), settings, entries }, null, 2);
+}
+
+function setStatus(msg, ok) {
+  const el = document.getElementById('backupStatus');
+  el.textContent = msg;
+  el.className = 'hint ' + (ok === true ? 'status-ok' : ok === false ? 'status-warn' : '');
+}
+
+// Ordner-Handle in IndexedDB merken (überlebt Neustart des Browsers)
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('azt-db', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('handles');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbSet(k, v) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('handles', 'readwrite');
+    tx.objectStore('handles').put(v, k);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+}
+async function idbGet(k) {
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('handles', 'readonly');
+    const rq = tx.objectStore('handles').get(k);
+    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+  });
+}
+
+async function pickBackupFolder() {
+  if (!supportsFS) {
+    setStatus('Dieser Browser unterstützt keine automatische Ordner-Speicherung (am Handy: „Backup importieren/exportieren" nutzen).', false);
+    return;
+  }
+  try {
+    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await idbSet('backupDir', dirHandle);
+    await writeBackup(true);
+    document.getElementById('pickFolderBtn').textContent = 'Backup-Ordner ändern';
+    document.getElementById('reconnectBtn').style.display = 'none';
+  } catch (e) {
+    if (e.name !== 'AbortError') setStatus('Ordner konnte nicht gewählt werden: ' + e.message, false);
+  }
+}
+
+async function reconnectFolder() {
+  if (!dirHandle) return pickBackupFolder();
+  try {
+    const p = await dirHandle.requestPermission({ mode: 'readwrite' });
+    if (p === 'granted') {
+      document.getElementById('reconnectBtn').style.display = 'none';
+      document.getElementById('pickFolderBtn').textContent = 'Backup-Ordner ändern';
+      await writeBackup(true);
+    } else {
+      setStatus('Zugriff verweigert — bitte Ordner neu wählen.', false);
+    }
+  } catch (e) {
+    setStatus('Verbindung fehlgeschlagen — bitte Ordner neu wählen.', false);
+  }
+}
+
+async function writeFile(name, content) {
+  const fh = await dirHandle.getFileHandle(name, { create: true });
+  const w = await fh.createWritable();
+  await w.write(content);
+  await w.close();
+}
+
+async function writeBackup(manual) {
+  if (!dirHandle) {
+    if (manual) setStatus('Kein Backup-Ordner verbunden.', false);
+    return;
+  }
+  try {
+    if (await dirHandle.queryPermission({ mode: 'readwrite' }) !== 'granted') {
+      document.getElementById('reconnectBtn').style.display = '';
+      setStatus('Backup pausiert — bitte „Backup wieder verbinden" klicken.', false);
+      return;
+    }
+    await writeFile('arbeitszeit-backup.json', backupData());
+    await writeFile('arbeitszeiten-uebersicht.html', reportHtml());
+    setStatus('Automatisches Backup aktiv · zuletzt gespeichert: ' + new Date().toLocaleString('de-DE') + ' → ' + dirHandle.name + ' (Backup + Übersicht)', true);
+  } catch (e) {
+    setStatus('Backup fehlgeschlagen: ' + e.message, false);
+  }
+}
+
+function exportJson() {
+  downloadBlob(new Blob([backupData()], { type: 'application/json' }), 'arbeitszeit-backup.json');
+}
+
+function importBackup(input) {
+  const file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data || !Array.isArray(data.entries)) throw new Error('Kein gültiges Backup');
+      const when = data.exportiert ? new Date(data.exportiert).toLocaleString('de-DE') : 'unbekannt';
+      if (!confirm('Backup vom ' + when + ' mit ' + data.entries.length + ' Einträgen laden?\nAchtung: Ersetzt die aktuellen ' + entries.length + ' Einträge auf diesem Gerät.')) return;
+      entries = data.entries;
+      if (data.settings && typeof data.settings.targetMin === 'number') settings = data.settings;
+      try {
+        localStorage.setItem(KEY, JSON.stringify(entries));
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      } catch (e) {}
+      document.getElementById('targetH').value = Math.floor(settings.targetMin / 60);
+      document.getElementById('targetM').value = settings.targetMin % 60;
+      document.getElementById('defaultPause').value = settings.defaultPause;
+      document.getElementById('pause').value = settings.defaultPause;
+      render();
+      setStatus('Backup importiert (' + entries.length + ' Einträge).', true);
+    } catch (e) {
+      setStatus('Import fehlgeschlagen: ' + e.message, false);
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function initBackup() {
+  if (!supportsFS) {
+    document.getElementById('pickFolderBtn').style.display = 'none';
+    setStatus('Handy-Modus: automatische Ordner-Speicherung nicht verfügbar. Nutze „Backup importieren" (aus OneDrive) und „Backup-Datei exportieren" (nach OneDrive).');
+    return;
+  }
+  try {
+    dirHandle = await idbGet('backupDir');
+    if (!dirHandle) { setStatus('Noch kein Backup-Ordner gewählt.'); return; }
+    const p = await dirHandle.queryPermission({ mode: 'readwrite' });
+    if (p === 'granted') {
+      document.getElementById('pickFolderBtn').textContent = 'Backup-Ordner ändern';
+      setStatus('Automatisches Backup aktiv → ' + dirHandle.name, true);
+    } else {
+      document.getElementById('reconnectBtn').style.display = '';
+      document.getElementById('pickFolderBtn').textContent = 'Backup-Ordner ändern';
+      setStatus('Backup-Ordner gemerkt — einmal „Backup wieder verbinden" klicken, um fortzusetzen.');
+    }
+  } catch (e) {
+    setStatus('Noch kein Backup-Ordner gewählt.');
+  }
+}
+
+// Init
+load();
+document.getElementById('targetH').value = Math.floor(settings.targetMin / 60);
+document.getElementById('targetM').value = settings.targetMin % 60;
+document.getElementById('defaultPause').value = settings.defaultPause;
+document.getElementById('date').value = new Date().toISOString().slice(0, 10);
+document.getElementById('pause').value = settings.defaultPause;
+['start', 'end', 'pause'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+render();
+initBackup();
+</script>
+</body>
+</html>
